@@ -136,6 +136,32 @@ def _gcp_schema() -> Dict[str, Any]:
     }
 
 
+def _hyperv_schema() -> Dict[str, Any]:
+    """Schema for Hyper-V local provider.
+
+    Fields collected in the build-options modal before provisioning.
+    All values are passed as cloud_overrides into the template YAML under the
+    'hyperv' top-level key, mirroring how 'aws', 'azure', and 'gcp' work.
+    """
+    return {
+        "hyperv_host": {
+            "label": "Hyper-V Host (IP or FQDN)",
+            "type": "text",
+            "required": True,
+        },
+        "hyperv_vswitch": {
+            "label": "Virtual Switch name",
+            "type": "text",
+            "required": True,
+        },
+        "hyperv_vm_ram_mb": {
+            "label": "RAM per VM (MB)",
+            "type": "text",
+            "required": False,
+        },
+    }
+
+
 def get_cloud_fields_schema(provider: str) -> Dict[str, Any]:
     """Return the cloud-specific fields schema for a provider (for dropdowns and labels)."""
     provider = (provider or "").lower()
@@ -145,6 +171,8 @@ def get_cloud_fields_schema(provider: str) -> Dict[str, Any]:
         return _azure_schema()
     if provider == "gcp":
         return _gcp_schema()
+    if provider == "hyperv":
+        return _hyperv_schema()
     return {}
 
 

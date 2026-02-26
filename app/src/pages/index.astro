@@ -70,14 +70,15 @@ const templatesByProvider = templates.reduce((acc, template) => {
 					<div class="step-item">
 						<div class="step-number">2</div>
 						<div class="step-content">
-							<h3 class="step-title">Choose Your Cloud Provider</h3>
+							<h3 class="step-title">Choose Your Provider</h3>
 							<p class="step-description">
-								Navigate to the subdirectory for your cloud provider. Create the directory if it doesn't exist:
+								Navigate to the subdirectory for your provider. Create the directory if it doesn't exist:
 							</p>
 							<div class="code-block">
 								<code>templates/aws/</code><br>
 								<code>templates/azure/</code><br>
-								<code>templates/gcp/</code>
+								<code>templates/gcp/</code><br>
+								<code>templates/hyperv/</code>
 							</div>
 						</div>
 					</div>
@@ -104,7 +105,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 							</p>
 							<ul class="step-list">
 								<li>Template name and description</li>
-								<li>Cloud provider configuration</li>
+								<li>Provider configuration</li>
 								<li>Server architecture and instances</li>
 								<li>Network settings and IP ranges</li>
 								<li>Software and role definitions</li>
@@ -120,7 +121,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 						<div class="step-content">
 							<h3 class="step-title">Refresh the Templates Page</h3>
 							<p class="step-description">
-								Once your template file is saved, refresh this page. Your new template will automatically appear in the list below, organized by cloud provider.
+								Once your template file is saved, refresh this page. Your new template will automatically appear in the list below, organized by provider.
 							</p>
 							<p class="step-note">
 								🔄 The template list is automatically generated from files in your <code>templates/</code> directory.
@@ -153,7 +154,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 				<button class="modal-close" id="build-options-close-btn" aria-label="Close">&times;</button>
 			</div>
 			<div class="modal-body">
-				<p class="build-options-intro">Set general and cloud-specific values for this attack range. They will be written into the config used for the build.</p>
+				<p class="build-options-intro">Set general and provider-specific values for this attack range. They will be written into the config used for the build.</p>
 				<form id="build-options-form" class="build-options-form">
 					<div id="build-options-general" class="build-options-section"></div>
 					<div id="build-options-fields" class="build-options-section"></div>
@@ -170,12 +171,13 @@ const templatesByProvider = templates.reduce((acc, template) => {
 	<div class="filters-section">
 		<div class="filters-container">
 			<div class="filter-group">
-				<label for="provider-select" class="filter-label">Cloud Provider:</label>
+				<label for="provider-select" class="filter-label">Provider:</label>
 				<select id="provider-select" class="filter-select">
 					<option value="all">All Providers</option>
-					<option value="aws" selected>AWS</option>
+					<option value="aws">AWS</option>
 					<option value="azure">Azure</option>
 					<option value="gcp">GCP</option>
+					<option value="hyperv" selected>Hyper-V</option>
 				</select>
 			</div>
 			<div class="filter-group">
@@ -209,17 +211,22 @@ const templatesByProvider = templates.reduce((acc, template) => {
 		return (
 			<section class="provider-section" data-provider={provider}>
 				<h2 class="provider-title">
-					{provider.toUpperCase()}
+					{provider === 'hyperv' ? 'Hyper-V' : provider.toUpperCase()}
 					{!isProviderAvailable && (
 						<span class="provider-unavailable-badge" title={providerInfo?.error_message || 'CLI not available'}>
-							⚠️ CLI Not Available
+							⚠️ Not Available
 						</span>
 					)}
 				</h2>
 				{!isProviderAvailable && providerInfo?.error_message && (
 					<div class="provider-error-message">
 						<p><strong>Error:</strong> {providerInfo.error_message}</p>
-						<p class="provider-error-hint">Install the {providerInfo.cli_command} CLI to use {provider.toUpperCase()} templates.</p>
+						<p class="provider-error-hint">
+							{provider === 'hyperv'
+								? 'Make sure Hyper-V is enabled and PowerShell remoting is configured on the host.'
+								: `Install the ${providerInfo.cli_command} CLI to use ${provider.toUpperCase()} templates.`
+							}
+						</p>
 					</div>
 				)}
 				<div class="templates-grid">
@@ -230,7 +237,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 							<div class={`template-card ${!isAvailable ? 'template-disabled' : ''}`} data-template-name={template.name.replace('.yml', '').toLowerCase()}>
 								<div class="template-header">
 									<h3>{template.name.replace('.yml', '')}</h3>
-									<span class="provider-badge">{provider}</span>
+									<span class="provider-badge">{provider === 'hyperv' ? 'Hyper-V' : provider}</span>
 								</div>
 								{template.description && (
 									<p class="template-description">{template.description}</p>
@@ -286,7 +293,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 								)}
 								{!isAvailable && (
 									<div class="template-unavailable-message">
-										<p>{providerInfo?.error_message || `${provider.toUpperCase()} CLI not available`}</p>
+										<p>{providerInfo?.error_message || `${provider === 'hyperv' ? 'Hyper-V' : provider.toUpperCase()} not available`}</p>
 									</div>
 								)}
 								<button
@@ -294,7 +301,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 									data-provider={template.provider}
 									data-name={template.name}
 									disabled={!isAvailable}
-									title={!isAvailable ? `Cannot build: ${providerInfo?.error_message || 'CLI not available'}` : 'Build attack range'}
+									title={!isAvailable ? `Cannot build: ${providerInfo?.error_message || 'not available'}` : 'Build attack range'}
 								>
 									{isAvailable ? 'Build' : 'Unavailable'}
 								</button>
@@ -369,7 +376,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 		
 		// Filter templates based on selected provider and search term
 		function filterTemplates() {
-			const selectedProvider = providerSelect?.value || 'aws';
+			const selectedProvider = providerSelect?.value || 'hyperv';
 			const searchTerm = (templateSearch?.value || '').toLowerCase().trim();
 			
 			providerSections.forEach((section) => {
@@ -407,9 +414,9 @@ const templatesByProvider = templates.reduce((acc, template) => {
 			});
 		}
 		
-		// Set default to AWS
+		// Set default to Hyper-V
 		if (providerSelect) {
-			providerSelect.value = 'aws';
+			providerSelect.value = 'hyperv';
 		}
 		
 		// Apply initial filter
@@ -424,7 +431,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 			templateSearch.addEventListener('input', filterTemplates);
 		}
 		
-		// Build-options modal: cloud-specific config before building
+		// Build-options modal: provider-specific config before building
 		const buildOptionsModal = document.getElementById('build-options-modal');
 		const buildOptionsTitle = document.getElementById('build-options-title');
 		const buildOptionsForm = document.getElementById('build-options-form') as HTMLFormElement;
@@ -449,12 +456,12 @@ const templatesByProvider = templates.reduce((acc, template) => {
 			if (buildOptionsModal) buildOptionsModal.style.display = 'flex';
 
 			// Show general fields immediately; ip whitelist default will be set when data loads
-			renderGeneralFields('', '0.0.0.0/0');
+			// For Hyper-V, ip_whitelist is not cloud-relevant but we still show password field
+			renderGeneralFields('', '0.0.0.0/0', provider === 'hyperv');
 
 			const ipv4CidrRe = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/32$/;
 			const ipv4Re = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 			function parsePublicIpV4Cidr(suggested: { ip?: string; cidr?: string }, publicIpData: { ip?: string; cidr?: string }): string {
-				// Prefer public-ip (outbound public IPv4) so we don't use 0.0.0.0 or Docker/internal IPs from suggested-ip
 				const fromPublic = (publicIpData.cidr || '').trim();
 				if (ipv4CidrRe.test(fromPublic)) return fromPublic;
 				const fromPublicIp = (publicIpData.ip || '').trim();
@@ -464,13 +471,19 @@ const templatesByProvider = templates.reduce((acc, template) => {
 				return '';
 			}
 
+			const ipFetchPromises = provider === 'hyperv'
+				? [Promise.resolve({ ip: '', cidr: '' }), Promise.resolve({ ip: '', cidr: '' })]
+				: [
+						fetch(`${API_BASE_URL}/suggested-ip`).then((r) => (r.ok ? r.json() : { ip: '', cidr: '' })).catch(() => ({ ip: '', cidr: '' })),
+						fetch(`${API_BASE_URL}/public-ip`).then((r) => (r.ok ? r.json() : { ip: '', cidr: '' })).catch(() => ({ ip: '', cidr: '' })),
+				  ];
+
 			Promise.all([
 				fetch(`${API_BASE_URL}/templates/${provider}/${name.replace(/\.yml$/i, '')}`).then((r) => (r.ok ? r.json() : { content: {} })),
-				fetch(`${API_BASE_URL}/suggested-ip`).then((r) => (r.ok ? r.json() : { ip: '', cidr: '' })).catch(() => ({ ip: '', cidr: '' })),
+				...ipFetchPromises,
 				fetch(`${API_BASE_URL}/templates/cloud-fields/${provider}`).then((r) => (r.ok ? r.json() : null)),
-				fetch(`${API_BASE_URL}/public-ip`).then((r) => (r.ok ? r.json() : { ip: '', cidr: '' })).catch(() => ({ ip: '', cidr: '' })),
 			])
-				.then(([templateData, suggestedIpData, schemaData, ipifyData]) => {
+				.then(([templateData, suggestedIpData, ipifyData, schemaData]) => {
 					buildOptionsLoading!.style.display = 'none';
 					const content = (templateData as { content?: Record<string, Record<string, unknown>> }).content || {};
 					const general = content.general || {};
@@ -478,7 +491,6 @@ const templatesByProvider = templates.reduce((acc, template) => {
 						suggestedIpData as { ip?: string; cidr?: string },
 						ipifyData as { ip?: string; cidr?: string }
 					);
-					// Always prefill with public IP when we have it; template often has 0.0.0.0/0
 					const ipWhitelistDefault = publicIpCidr || String(general.ip_whitelist || '').trim() || '0.0.0.0/0';
 					const passwordEl = document.getElementById('build-opt-attack_range_password') as HTMLInputElement;
 					const whitelistEl = document.getElementById('build-opt-ip_whitelist') as HTMLInputElement;
@@ -496,7 +508,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 				});
 		}
 
-		function renderGeneralFields(defaultPassword: string, defaultIpWhitelist: string) {
+		function renderGeneralFields(defaultPassword: string, defaultIpWhitelist: string, isHyperV: boolean = false) {
 			const container = buildOptionsGeneral!;
 			container.innerHTML = '';
 			const sectionTitle = document.createElement('h3');
@@ -537,13 +549,16 @@ const templatesByProvider = templates.reduce((acc, template) => {
 				defaultPassword,
 				'Attack range password'
 			);
-			addField(
-				'build-opt-ip_whitelist',
-				'ip_whitelist',
-				'IP whitelist (CIDR) *',
-				defaultIpWhitelist,
-				'e.g. 1.2.3.4/32 or 0.0.0.0/0'
-			);
+			// ip_whitelist is not needed for Hyper-V (local/private network)
+			if (!isHyperV) {
+				addField(
+					'build-opt-ip_whitelist',
+					'ip_whitelist',
+					'IP whitelist (CIDR) *',
+					defaultIpWhitelist,
+					'e.g. 1.2.3.4/32 or 0.0.0.0/0'
+				);
+			}
 		}
 
 		function renderBuildOptionsForm(
@@ -557,7 +572,7 @@ const templatesByProvider = templates.reduce((acc, template) => {
 			if (fieldNames.length > 0) {
 				const sectionTitle = document.createElement('h3');
 				sectionTitle.className = 'build-options-section-title';
-				sectionTitle.textContent = `${provider.toUpperCase()} — Cloud`;
+				sectionTitle.textContent = provider === 'hyperv' ? 'Hyper-V — Host' : `${provider.toUpperCase()} — Cloud`;
 				container.appendChild(sectionTitle);
 			}
 			const zoneField = provider === 'gcp' ? 'zone' : null;
@@ -588,35 +603,28 @@ const templatesByProvider = templates.reduce((acc, template) => {
 						if (String(defaults[key] || '') === opt) o.selected = true;
 						select.appendChild(o);
 					});
+					// For GCP zone: dynamically populate from region
 					if (meta.options_from_region && zoneField) {
-						select.dataset.zonesFromRegion = 'true';
-						const defaultZone = String(defaults[key] || '');
-						const updateZones = () => {
-							const regionSelect = container.querySelector('#build-opt-region') as HTMLSelectElement;
-							const region = regionSelect?.value || '';
-							select.innerHTML = '';
-							fetch(`${API_BASE_URL}/templates/cloud-fields/gcp/zones?region=${encodeURIComponent(region)}`)
-								.then((r) => r.json())
-								.then((data: { zones: string[] }) => {
-									(data.zones || []).forEach((z: string) => {
-										const o = document.createElement('option');
-										o.value = z;
-										o.textContent = z;
-										if (defaultZone === z) o.selected = true;
-										select.appendChild(o);
+						const regionSelect = document.getElementById(`build-opt-${zoneField}`) as HTMLSelectElement;
+						if (regionSelect) {
+							const updateZones = (region: string) => {
+								fetch(`${API_BASE_URL}/templates/cloud-fields/gcp/zones?region=${encodeURIComponent(region)}`)
+									.then((r) => r.ok ? r.json() : { zones: [] })
+									.then((data) => {
+										select.innerHTML = '';
+										(data.zones || []).forEach((z: string) => {
+											const o = document.createElement('option');
+											o.value = z;
+											o.textContent = z;
+											select.appendChild(o);
+										});
 									});
-									if (!select.value && select.options.length) select.selectedIndex = 0;
-								});
-						};
-						fieldWrap.appendChild(select);
-						container.appendChild(fieldWrap);
-						setTimeout(updateZones, 0);
-						const regionEl = document.getElementById('build-opt-region');
-						regionEl?.addEventListener('change', updateZones);
-					} else {
-						fieldWrap.appendChild(select);
-						container.appendChild(fieldWrap);
+							};
+							regionSelect.addEventListener('change', () => updateZones(regionSelect.value));
+							if (regionSelect.value) updateZones(regionSelect.value);
+						}
 					}
+					fieldWrap.appendChild(select);
 				} else {
 					const input = document.createElement('input');
 					input.type = 'text';
@@ -624,30 +632,11 @@ const templatesByProvider = templates.reduce((acc, template) => {
 					input.name = key;
 					input.className = 'build-options-input';
 					input.required = meta.required !== false;
-					input.value = String(defaults[key] ?? '');
+					input.value = String(defaults[key] || '');
 					input.placeholder = meta.label;
 					fieldWrap.appendChild(input);
-					container.appendChild(fieldWrap);
 				}
-			});
-		}
-
-		function doBuild(
-			templateKey: string,
-			generalOverrides: Record<string, string> | null,
-			cloudOverrides: Record<string, Record<string, string>> | null
-		) {
-			const body: {
-				template: string;
-				general_overrides?: Record<string, string>;
-				cloud_overrides?: Record<string, Record<string, string>>;
-			} = { template: templateKey };
-			if (generalOverrides && Object.keys(generalOverrides).length > 0) body.general_overrides = generalOverrides;
-			if (cloudOverrides && Object.keys(cloudOverrides).length > 0) body.cloud_overrides = cloudOverrides;
-			return fetch(`${API_BASE_URL}/attack-range/build`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body),
+				container.appendChild(fieldWrap);
 			});
 		}
 
@@ -658,455 +647,64 @@ const templatesByProvider = templates.reduce((acc, template) => {
 
 		if (buildOptionsCloseBtn) buildOptionsCloseBtn.addEventListener('click', closeBuildOptionsModal);
 		if (buildOptionsCancelBtn) buildOptionsCancelBtn.addEventListener('click', closeBuildOptionsModal);
-		buildOptionsModal?.addEventListener('click', (e) => {
-			if (e.target === buildOptionsModal) closeBuildOptionsModal();
-		});
+		if (buildOptionsModal) {
+			buildOptionsModal.addEventListener('click', (e) => {
+				if (e.target === buildOptionsModal) closeBuildOptionsModal();
+			});
+		}
 
-		buildOptionsForm?.addEventListener('submit', async (e) => {
-			e.preventDefault();
-			if (!pendingBuild) return;
-			const fd = new FormData(buildOptionsForm);
-			const provider = pendingBuild.provider;
-			const cloudFieldKeys = new Set(pendingBuild.cloudFieldKeys);
-			const generalOverrides: Record<string, string> = {};
-			const cloudOverrides: Record<string, string> = {};
-			for (const [key, value] of fd.entries()) {
-				if (typeof value !== 'string') continue;
-				if (GENERAL_FIELD_KEYS.includes(key)) {
-					generalOverrides[key] = value;
-				} else if (cloudFieldKeys.has(key)) {
-					cloudOverrides[key] = value;
-				}
-			}
-			(buildOptionsSubmitBtn as HTMLButtonElement).disabled = true;
-			try {
-				const response = await doBuild(
-					pendingBuild.templateKey,
-					Object.keys(generalOverrides).length > 0 ? generalOverrides : null,
-					Object.keys(cloudOverrides).length > 0 ? { [provider]: cloudOverrides } : null
-				);
-				if (!response.ok) {
-					const err = await response.json();
-					throw new Error(err.message || 'Failed to build attack range');
-				}
-				const result = await response.json();
-				window.location.href = `/attack-ranges?build=${result.attack_range_id}`;
-			} catch (error) {
-				alert(`Error: ${error instanceof Error ? error.message : 'Failed to build attack range'}`);
-			} finally {
-				(buildOptionsSubmitBtn as HTMLButtonElement).disabled = false;
-			}
-		});
-
-		const buildButtons = document.querySelectorAll('.build-button');
-		buildButtons.forEach((button) => {
-			button.addEventListener('click', (e) => {
-				const btn = e.target as HTMLButtonElement;
-				const provider = btn.dataset.provider;
-				const name = btn.dataset.name;
-				if (!provider || !name) return;
+		// Attach build buttons
+		document.querySelectorAll('.build-button').forEach((btn) => {
+			btn.addEventListener('click', (e) => {
+				const button = e.currentTarget as HTMLButtonElement;
+				const provider = button.getAttribute('data-provider') || '';
+				const name = button.getAttribute('data-name') || '';
 				openBuildOptionsModal(provider, name);
 			});
 		});
-		
-		// Smart polling: only refresh when templates are added
-		let lastTemplates: string | null = null;
-		let pollingInterval: number | null = null;
-		
-		// Get initial state from the page
-		const getCurrentTemplatesState = (): string => {
-			const templates: Array<{provider: string, name: string}> = [];
-			templateCards.forEach((card) => {
-				const provider = card.closest('.provider-section')?.getAttribute('data-provider');
-				const name = card.getAttribute('data-template-name');
-				if (provider && name) {
-					templates.push({ provider, name });
-				}
-			});
-			// Sort for consistent comparison
-			templates.sort((a, b) => {
-				const providerCompare = a.provider.localeCompare(b.provider);
-				return providerCompare !== 0 ? providerCompare : a.name.localeCompare(b.name);
-			});
-			return JSON.stringify(templates);
-		};
-		
-		lastTemplates = getCurrentTemplatesState();
-		
-		const checkForNewTemplates = async () => {
-			try {
-				const response = await fetch(`${API_BASE_URL}/templates`);
-				if (response.ok) {
-					const data = await response.json();
-					const templates = data.templates || [];
-					
-					// Create current state
-					const currentState = JSON.stringify(
-						templates
-							.map((t: any) => ({ provider: t.provider, name: t.name.replace('.yml', '').toLowerCase() }))
-							.sort((a: any, b: any) => {
-								const providerCompare = a.provider.localeCompare(b.provider);
-								return providerCompare !== 0 ? providerCompare : a.name.localeCompare(b.name);
-							})
-					);
-					
-					// Only reload if templates changed
-					if (currentState !== lastTemplates) {
-						window.location.reload();
+
+		// Handle build form submit
+		if (buildOptionsForm) {
+			buildOptionsForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				if (!pendingBuild) return;
+
+				const formData = new FormData(buildOptionsForm);
+				const generalOverrides: Record<string, string> = {};
+				const cloudOverrides: Record<string, string> = {};
+
+				GENERAL_FIELD_KEYS.forEach((key) => {
+					const val = formData.get(key);
+					if (val !== null && val !== undefined) generalOverrides[key] = String(val);
+				});
+				pendingBuild.cloudFieldKeys.forEach((key) => {
+					const val = formData.get(key);
+					if (val !== null && val !== undefined) cloudOverrides[key] = String(val);
+				});
+
+				closeBuildOptionsModal();
+
+				const templatePath = `${pendingBuild.provider}/${pendingBuild.name}`;
+				try {
+					const response = await fetch(`${API_BASE_URL}/attack-range/build`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							template: templatePath,
+							general_overrides: generalOverrides,
+							cloud_overrides: cloudOverrides,
+						}),
+					});
+					if (response.ok) {
+						window.location.href = '/attack-ranges';
+					} else {
+						const err = await response.json();
+						alert(`Build failed: ${err.message || 'Unknown error'}`);
 					}
+				} catch (err) {
+					alert(`Build request failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
 				}
-			} catch (error) {
-				console.error('Error checking templates:', error);
-			}
-		};
-		
-		// Poll every 3 seconds
-		pollingInterval = setInterval(checkForNewTemplates, 3000) as unknown as number;
-		
-		// Clean up on page unload
-		window.addEventListener('beforeunload', () => {
-			if (pollingInterval !== null) {
-				clearInterval(pollingInterval);
-			}
-		});
+			});
+		}
 	});
 </script>
-
-<style>
-	.page-header--with-action {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 1.5rem;
-		margin-bottom: 1.5rem;
-	}
-
-	.page-header--with-action > div {
-		flex: 1;
-	}
-
-	.modal-intro {
-		margin-bottom: 2rem;
-		padding: 1.25rem;
-		background: rgba(59, 130, 246, 0.1);
-		border-left: 4px solid var(--color-accent-blue);
-		border-radius: var(--radius-md);
-	}
-
-	.modal-intro p {
-		margin: 0;
-		font-size: 1.0625rem;
-		color: var(--color-text-muted);
-	}
-
-	.steps-container {
-		display: flex;
-		flex-direction: column;
-		gap: 1.75rem;
-		margin-bottom: 2rem;
-	}
-
-	.step-item {
-		display: flex;
-		gap: 1.25rem;
-		position: relative;
-	}
-
-	.step-item:not(:last-child)::after {
-		content: '';
-		position: absolute;
-		left: 1.25rem;
-		top: 3.5rem;
-		width: 2px;
-		height: calc(100% + 1.75rem);
-		background: linear-gradient(180deg, rgba(59, 130, 246, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%);
-	}
-
-	.step-number {
-		flex-shrink: 0;
-		width: 2.5rem;
-		height: 2.5rem;
-		background: linear-gradient(135deg, var(--color-accent-blue) 0%, var(--color-accent-purple) 100%);
-		color: #ffffff;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-weight: 700;
-		font-size: 1rem;
-		box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-		position: relative;
-		z-index: 1;
-	}
-
-	.step-content {
-		flex: 1;
-		padding-top: 0.25rem;
-	}
-
-	.step-title {
-		margin: 0 0 0.75rem;
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: var(--color-text-primary);
-		letter-spacing: -0.01em;
-	}
-
-	.step-description {
-		margin: 0 0 1rem;
-		font-size: 0.9375rem;
-		color: var(--color-text-muted);
-		line-height: 1.6;
-	}
-
-	.step-list {
-		margin: 0.75rem 0;
-		padding-left: 1.5rem;
-		color: var(--color-text-muted);
-		font-size: 0.9375rem;
-		line-height: 1.8;
-	}
-
-	.step-list li {
-		margin-bottom: 0.5rem;
-	}
-
-	.step-list li::marker {
-		color: var(--color-accent-blue-light);
-	}
-
-	.step-note {
-		margin: 1rem 0 0;
-		padding: 0.875rem 1rem;
-		background: rgba(34, 197, 94, 0.1);
-		border-left: 3px solid var(--color-success);
-		border-radius: 6px;
-		font-size: 0.875rem;
-		color: #86efac;
-		line-height: 1.6;
-	}
-
-	.step-note strong {
-		color: var(--color-success-lighter);
-	}
-
-	.modal-info-box {
-		display: flex;
-		gap: 1rem;
-		padding: 1.25rem 1.5rem;
-		background: rgba(59, 130, 246, 0.1);
-		border: 1px solid rgba(59, 130, 246, 0.3);
-		border-radius: var(--radius-xl);
-		margin-top: 1.5rem;
-	}
-
-	.info-box-icon {
-		font-size: 1.5rem;
-		flex-shrink: 0;
-		line-height: 1;
-	}
-
-	.info-box-content {
-		flex: 1;
-		font-size: 0.9375rem;
-		color: var(--color-text-muted);
-		line-height: 1.6;
-	}
-
-	.info-box-content strong {
-		color: var(--color-accent-blue-light);
-		font-weight: 600;
-	}
-
-	.filters-section {
-		margin-bottom: 2.5rem;
-	}
-
-	.filters-container {
-		display: flex;
-		gap: 1.5rem;
-		flex-wrap: wrap;
-		align-items: flex-end;
-	}
-
-	.filter-group {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.filter-select {
-		min-width: 200px;
-	}
-
-	.filter-input {
-		min-width: 300px;
-	}
-
-	.provider-section {
-		margin-bottom: 4rem;
-	}
-
-	.provider-title {
-		font-size: 1.125rem;
-		font-weight: 700;
-		margin: 0 0 1.75rem;
-		color: var(--color-accent-blue-light);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.provider-title::before {
-		content: '';
-		width: 4px;
-		height: 1.5rem;
-		background: linear-gradient(135deg, var(--color-accent-blue) 0%, var(--color-accent-purple) 100%);
-		border-radius: 2px;
-	}
-
-	.provider-unavailable-badge {
-		margin-left: 0.75rem;
-		font-size: 0.75rem;
-		background: rgba(239, 68, 68, 0.2);
-		color: var(--color-error-light);
-		padding: 0.25rem 0.5rem;
-		border-radius: 6px;
-		font-weight: 600;
-		border: 1px solid rgba(239, 68, 68, 0.3);
-	}
-
-	.provider-error-message {
-		background: rgba(239, 68, 68, 0.1);
-		border: 1px solid rgba(239, 68, 68, 0.3);
-		border-radius: var(--radius-xl);
-		padding: 1rem 1.25rem;
-		margin-bottom: 1.5rem;
-		color: var(--color-error-lighter);
-	}
-
-	.provider-error-message p {
-		margin: 0.5rem 0;
-		color: var(--color-error-lighter);
-	}
-
-	.provider-error-message strong {
-		color: var(--color-error-light);
-	}
-
-	.provider-error-hint {
-		font-size: 0.875rem;
-		color: var(--color-text-muted) !important;
-		margin-top: 0.5rem;
-	}
-
-	.templates-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-		gap: 1.5rem;
-	}
-
-	.template-card {
-		background: var(--color-bg-card);
-		backdrop-filter: blur(10px);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-2xl);
-		padding: 1.75rem;
-		transition: all var(--transition-normal);
-		box-shadow: var(--shadow-md), var(--shadow-sm);
-		display: flex;
-		flex-direction: column;
-		min-height: 200px;
-	}
-
-	.template-card:hover {
-		border-color: rgba(59, 130, 246, 0.4);
-		background: var(--color-bg-card-hover);
-		transform: translateY(-4px);
-		box-shadow: 0 12px 24px rgba(59, 130, 246, 0.15), 0 4px 8px rgba(0, 0, 0, 0.2);
-	}
-
-	.template-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1.25rem;
-	}
-
-	.template-header h3 {
-		margin: 0;
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: var(--color-text-primary);
-		letter-spacing: -0.01em;
-	}
-
-	.template-description {
-		margin: 0 0 1.25rem;
-		color: var(--color-text-muted);
-		font-size: 0.9375rem;
-		line-height: 1.6;
-		padding: 0.875rem;
-		background: rgba(15, 23, 42, 0.4);
-		border-radius: var(--radius-md);
-		border-left: 3px solid rgba(59, 130, 246, 0.5);
-	}
-
-	.architecture-section {
-		margin: 0 0 1.25rem;
-		padding: 1rem;
-		background: rgba(15, 23, 42, 0.4);
-		border-radius: var(--radius-md);
-		border-left: 3px solid rgba(34, 197, 94, 0.5);
-	}
-
-	.architecture-title {
-		margin: 0 0 0.875rem;
-		font-size: 0.875rem;
-		font-weight: 700;
-		color: var(--color-accent-blue-light);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.template-disabled {
-		opacity: 0.6;
-		background: rgba(30, 41, 59, 0.4);
-		border-color: rgba(239, 68, 68, 0.2);
-	}
-
-	.template-disabled:hover {
-		transform: none;
-		border-color: rgba(239, 68, 68, 0.2);
-		background: rgba(30, 41, 59, 0.4);
-		box-shadow: var(--shadow-md), var(--shadow-sm);
-	}
-
-	.template-unavailable-message {
-		background: rgba(239, 68, 68, 0.1);
-		border: 1px solid rgba(239, 68, 68, 0.2);
-		border-radius: var(--radius-md);
-		padding: 0.75rem;
-		margin-bottom: 1rem;
-	}
-
-	.template-unavailable-message p {
-		margin: 0;
-		font-size: 0.875rem;
-		color: var(--color-error-lighter);
-		line-height: 1.4;
-	}
-
-	.build-button {
-		width: 100%;
-		margin-top: auto;
-	}
-
-	.build-button:disabled {
-		background: rgba(148, 163, 184, 0.3);
-		color: var(--color-text-dim);
-		box-shadow: none;
-	}
-</style>
