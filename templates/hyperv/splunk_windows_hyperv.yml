@@ -1,0 +1,42 @@
+# Splunk Attack Range - Hyper-V Local
+# Template: splunk + Windows endpoint
+# Host requirements: 20 GB RAM, 8 vCPU free
+general:
+  attack_range_password: Changeme1!
+  cloud_provider: hyperv
+  attack_range_name: ar
+  description: "Hyper-V range: Splunk + Windows Server 2022 endpoint"
+
+hyperv:
+  switch_wan:  CR-WAN
+  switch_mgmt: CR-MGMT
+  switch_ips1: CR-IPS1
+  switch_ips2: CR-IPS2
+  nat_name:    AR-NAT
+  host_wan_ip: 10.10.10.1
+  host_mgmt_ip: 172.16.100.2
+  subnet_mgmt: 172.16.100.0/24
+  subnet_targets: 172.16.101.0/24
+
+attack_range:
+- name: splunk
+  os: linux
+  box: bento/ubuntu-22.04
+  ip_last_octet: 10
+  memory_mb: 8192
+  cpus: 4
+  roles:
+  - role: P4T12ICK.ludus_ar_splunk
+    vars:
+      ludus_ar_splunk_password: Changeme1!
+- name: win
+  os: windows
+  box: gusztavvargadr/windows-server-2022-standard-core
+  ip_last_octet: 20
+  memory_mb: 4096
+  cpus: 2
+  roles:
+  - role: P4T12ICK.ludus_ar_windows
+    vars:
+      ludus_ar_windows_password: Changeme1!
+      ludus_ar_windows_splunk_ip: 172.16.100.10
