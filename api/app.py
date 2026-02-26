@@ -253,19 +253,37 @@ def check_credentials_available(provider: str) -> Tuple[bool, Optional[str]]:
 
 def get_provider_availability(test_missing: Optional[str] = None) -> list:
     """
-    Get availability status for all cloud provider CLIs and credentials.
+    Get availability status for all provider CLIs and credentials.
+    Hyper-V is always reported as available (local provider, no CLI check needed).
     
     :param test_missing: Optional provider name to simulate as missing (for testing)
     :return: List of ProviderAvailability objects
     """
-    providers_config = [
+    cloud_providers_config = [
         {"provider": "aws", "cli": "aws"},
         {"provider": "azure", "cli": "az"},
         {"provider": "gcp", "cli": "gcloud"},
     ]
     
     results = []
-    for provider_config in providers_config:
+
+    # Hyper-V: local provider — always available, no CLI check
+    if not (test_missing and test_missing.lower() == "hyperv"):
+        results.append(ProviderAvailability(
+            provider="hyperv",
+            available=True,
+            cli_command="hyperv",
+            error_message=None
+        ))
+    else:
+        results.append(ProviderAvailability(
+            provider="hyperv",
+            available=False,
+            cli_command="hyperv",
+            error_message="Simulated missing provider for testing (test_missing=hyperv)"
+        ))
+
+    for provider_config in cloud_providers_config:
         provider = provider_config["provider"]
         cli_command = provider_config["cli"]
         
@@ -319,8 +337,8 @@ def get_templates() -> list:
     if not os.path.exists(TEMPLATES_DIR):
         return templates
 
-    # Scan templates directory
-    for provider in ["aws", "azure", "gcp"]:
+    # Scan templates directory — includes hyperv alongside cloud providers
+    for provider in ["aws", "azure", "gcp", "hyperv"]:
         provider_dir = os.path.join(TEMPLATES_DIR, provider)
         if os.path.exists(provider_dir):
             yml_files = glob.glob(os.path.join(provider_dir, "*.yml"))
@@ -1698,16 +1716,16 @@ def get_template(path: TemplatePath):
     "/templates/cloud-fields/<provider>",
     tags=[template_tag],
     summary="Get cloud-specific fields schema",
-    description="Get the schema of cloud-specific config fields for a provider (for build form: labels, types, dropdown options)."
+    description="Get the schema of provider-specific config fields (for build form: labels, types, dropdown options)."
 )
 def get_template_cloud_fields(path: CloudFieldsProviderPath):
-    """Return cloud-specific fields schema for the given provider (aws, azure, gcp)."""
+    """Return provider-specific fields schema for the given provider (aws, azure, gcp, hyperv)."""
     provider = path.provider
     schema = get_cloud_fields_schema(provider)
     if not schema:
         return jsonify(ErrorResponse(
             message=f"Unknown provider: {provider}",
-            details="Use aws, azure, or gcp"
+            details="Use aws, azure, gcp, or hyperv"
         ).model_dump()), 404
     return jsonify({"provider": provider, "fields": schema})
 
@@ -1795,11 +1813,11 @@ def get_suggested_ip():
     "/providers/check",
     tags=[provider_tag],
     responses={200: ProviderCheckResponse},
-    summary="Check provider CLI availability",
-    description="Check which cloud provider CLIs (aws, azure, gcp) are installed and available. Use ?test_missing=<provider> to simulate a missing provider for testing."
+    summary="Check provider availability",
+    description="Check which providers (aws, azure, gcp, hyperv) are available. Use ?test_missing=<provider> to simulate a missing provider for testing."
 )
 def check_providers():
-    """Check availability of cloud provider CLIs."""
+    """Check availability of all providers."""
     # Get test_missing parameter from query string
     test_missing = request.args.get('test_missing', None)
     
