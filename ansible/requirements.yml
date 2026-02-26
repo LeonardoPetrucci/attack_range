@@ -1,0 +1,18 @@
+---
+roles:
+  - name: P4T12ICK.ludus_ar_splunk
+    src: https://github.com/P4T12ICK/ludus_ar_splunk
+  - name: P4T12ICK.ludus_ar_windows
+    src: https://github.com/P4T12ICK/ludus_ar_windows
+  - name: P4T12ICK.ar_domain_controller
+    src: https://github.com/P4T12ICK/ar_domain_controller
+  - name: P4T12ICK.ar_domain_join
+    src: https://github.com/P4T12ICK/ar_domain_join
+  - name: P4T12ICK.ar_guacamole
+    src: https://github.com/P4T12ICK/ar_guacamole
+  - name: P4T12ICK.ludus_ar_kali
+    src: https://github.com/P4T12ICK/ludus_ar_kali
+  - name: P4T12ICK.ludus_ar_linux
+    src: https://github.com/P4T12ICK/ludus_ar_linux
+  - name: P4T12ICK.ludus_ar_zeek
+    src: https://github.com/P4T12ICK/ludus_ar_zeek

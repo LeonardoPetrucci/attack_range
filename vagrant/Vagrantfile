@@ -1,0 +1,92 @@
+# frozen_string_literal: true
+# =========================================================
+# Splunk Attack Range - Hyper-V Local
+# Vagrantfile dinamico guidato da ENV vars settate da Terraform
+# =========================================================
+require 'yaml'
+
+# Legge la lista VM da AR_MACHINES (JSON) oppure costruisce una singola VM da ENV
+def build_machines
+  if ENV['AR_MACHINES']
+    JSON.parse(ENV['AR_MACHINES'])
+  else
+    [{
+      'name'         => ENV.fetch('AR_VM_NAME', 'ar-server'),
+      'box'          => ENV.fetch('AR_BOX', 'bento/ubuntu-22.04'),
+      'os'           => ENV.fetch('AR_OS', 'linux'),
+      'ip_mgmt'      => ENV.fetch('AR_IP_MGMT', '172.16.100.10'),
+      'memory_mb'    => ENV.fetch('AR_MEMORY', '4096').to_i,
+      'cpus'         => ENV.fetch('AR_CPUS', '2').to_i,
+      'sw_mgmt'      => ENV.fetch('AR_SW_MGMT', 'CR-MGMT'),
+      'sw_ips1'      => ENV.fetch('AR_SW_IPS1', 'CR-IPS1'),
+      'sw_ips2'      => ENV.fetch('AR_SW_IPS2', 'CR-IPS2'),
+      'sw_wan'       => ENV.fetch('AR_SW_WAN', 'CR-WAN'),
+      'role'         => ENV.fetch('AR_ROLE', 'generic'),
+      'zeek_monitor' => ENV.fetch('AR_ZEEK_MONITOR', 'false') == 'true',
+    }]
+  end
+end
+
+require 'json'
+machines = build_machines
+
+Vagrant.configure('2') do |config|
+  config.ssh.insert_key = false
+  config.ssh.extra_args = ['-o', 'StrictHostKeyChecking=no']
+
+  config.vm.provider 'hyperv' do |hv|
+    hv.enable_virtualization_extensions = true
+    hv.linked_clone                     = true
+    hv.vm_integration_services = {
+      guest_service_interface: true,
+      time_synchronization:    true
+    }
+  end
+
+  machines.each do |m|
+    vm_name = m['name']
+    config.vm.define vm_name do |node|
+      node.vm.box      = m['box']
+      node.vm.hostname = vm_name
+
+      # NIC 1: Management (tutti)
+      node.vm.network 'private_network',
+        bridge: m['sw_mgmt'],
+        ip:     m['ip_mgmt']
+
+      # NIC 2: WAN solo router
+      if m['role'] == 'router'
+        node.vm.network 'private_network',
+          bridge: m.fetch('sw_wan', 'CR-WAN'),
+          ip:     '10.10.10.2'
+        node.vm.network 'private_network',
+          bridge: m.fetch('sw_ips1', 'CR-IPS1'),
+          ip:     '172.16.101.1'
+      end
+
+      # NIC 3+4: Zeek bridge AFPACKET
+      if m['role'] == 'zeek'
+        node.vm.network 'private_network', bridge: m['sw_ips1'], auto_config: false
+        node.vm.network 'private_network', bridge: m['sw_ips2'], auto_config: false
+      end
+
+      node.vm.provider 'hyperv' do |hv|
+        hv.vmname  = vm_name
+        hv.memory  = m.fetch('memory_mb', 4096)
+        hv.cpus    = m.fetch('cpus', 2)
+      end
+
+      # Windows: WinRM
+      if m['os'] == 'windows'
+        node.vm.communicator             = 'winrm'
+        node.winrm.username              = 'vagrant'
+        node.winrm.password              = 'vagrant'
+        node.winrm.transport             = :plaintext
+        node.winrm.basic_auth_only       = true
+        node.vm.guest                    = :windows
+        node.vm.boot_timeout             = 600
+        node.vm.graceful_halt_timeout    = 120
+      end
+    end
+  end
+end

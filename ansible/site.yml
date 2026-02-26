@@ -1,0 +1,12 @@
+---
+# Splunk Attack Range - Hyper-V Local
+# site.yml generato dinamicamente da attack_range_controller.py
+# Questo file viene sovrascritto ad ogni build con i ruoli corretti
+# per il template scelto. Non modificare manualmente.
+
+- name: "Attack Range - Hyper-V provisioning"
+  hosts: all
+  gather_facts: true
+  become: true
+  roles: []
+  # I ruoli vengono iniettati dinamicamente dal controller
