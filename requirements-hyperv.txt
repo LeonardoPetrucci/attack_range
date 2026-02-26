@@ -1,0 +1,6 @@
+# Splunk Attack Range - Hyper-V Local
+# pip install -r requirements-hyperv.txt
+pyyaml>=6.0
+ansible>=8.0
+jinja2>=3.1
+requests>=2.31
