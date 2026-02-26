@@ -1,10 +1,47 @@
 ---
-# Playbook to run Atomic Red Team techniques using p4t12ick.ar_atomic_red_team role from Ansible Galaxy
-- hosts: "{{ target_host }}"
-  gather_facts: true
-  # Note: become is handled by the role internally for Linux tasks
-  # Windows hosts don't support become, so we don't set it at playbook level
+# Simulate Atomic Red Team techniques on a Windows or Linux target
+- name: "Atomic Red Team simulation"
+  hosts: "{{ target | default('ar-win') }}"
+  gather_facts: false
   vars:
-    ar_atomic_red_team_techniques: "{{ techniques | default([]) }}"
-  roles:
-    - p4t12ick.ar_atomic_red_team
+    techniques: "T1003.001"
+    art_run_tests: false
+
+  tasks:
+    - name: Check target OS (Windows)
+      win_ping:
+      register: win_ping_result
+      ignore_errors: true
+      when: ansible_os_family is defined and ansible_os_family == 'Windows'
+
+    - name: Run Atomic Red Team on Windows
+      win_shell: |
+        $techniques = '{{ techniques }}'.Split(',')
+        foreach ($t in $techniques) {
+          $t = $t.Trim()
+          Write-Host "[AR] Executing technique: $t"
+          IEX (IWR 'https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/install-atomicredteam.ps1' -UseBasicParsing)
+          Invoke-AtomicTest $t -GetPrereqs
+          Invoke-AtomicTest $t
+        }
+      when:
+        - art_run_tests | bool
+        - ansible_connection == 'winrm' or (ansible_os_family is defined and ansible_os_family == 'Windows')
+      ignore_errors: true
+
+    - name: Run Atomic Red Team on Linux
+      shell: |
+        which ruby || (apt-get update -y && apt-get install -y ruby ruby-dev)
+        gem list | grep -q atomic_red_team_exec || gem install atomic_red_team_exec --no-document
+        ruby -e "
+          require 'atomic_red_team_exec'
+          techniques = '{{ techniques }}'.split(',')
+          techniques.each do |t|
+            puts \"[AR] Executing #{t.strip}\"
+            AtomicRedTeamExec::Runner.new.run(t.strip)
+          end
+        "
+      when:
+        - art_run_tests | bool
+        - ansible_connection != 'winrm'
+      ignore_errors: true
