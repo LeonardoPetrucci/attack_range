@@ -1,0 +1,22 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US
+  keyboard:
+    layout: us
+  storage:
+    layout:
+      name: direct
+  identity:
+    hostname: ubuntu-ar
+    username: ubuntu
+    password: $6$rounds=4096$saltsalt$WKnJQobriNFaEJc3HqBi7oEFqhFO3ESbQoJAkEq3cXiDPzJGRqN.c1pnlgIqBDZgV0CdYY.TmSXkmfpjkQDw0
+  ssh:
+    install-server: true
+    allow-pw: true
+  packages:
+    - python3
+    - openssh-server
+    - cloud-init
+  late-commands:
+    - "sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /target/etc/ssh/sshd_config"
