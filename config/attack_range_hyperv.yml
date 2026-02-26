@@ -1,0 +1,52 @@
+# =============================================================
+# Attack Range - Hyper-V Local Deployment Configuration
+# Usage: python attack_range.py build --config config/attack_range_hyperv.yml
+# =============================================================
+
+general:
+  cloud_provider: hyperv
+  attack_range_password: "Splunk@Range2025!"
+  key_name: attack_range_hyperv
+
+hyperv_host:
+  host: "192.168.1.10"          # IP or hostname of your Hyper-V host
+  username: "Administrator"     # Local or domain admin (DOMAIN\\user)
+  password: "HostAdminPass!"    # WinRM password
+  vm_base_path: "C:/AttackRangeVMs"
+
+router:
+  vhdx_path: "C:/AttackRangeImages/ubuntu-22.04/disk.vhdx"
+  external_switch: "Default Switch"   # Hyper-V switch with internet access
+  router_ip: "192.168.1.10"           # Host IP - used as WireGuard endpoint
+  cpus: 2
+  memory_mb: 2048
+
+network:
+  nat_subnet: "10.0.2.0/24"
+  nat_gateway_ip: "10.0.2.1"
+  ip_prefix: "10.0.2"
+
+attack_range:
+  - name: splunk
+    ip_last_octet: 11
+    vhdx_path: "C:/AttackRangeImages/ubuntu-22.04/disk.vhdx"
+    windows: false
+    cpus: 4
+    memory_mb: 8192
+    user_name: ubuntu
+
+  - name: win10-victim
+    ip_last_octet: 12
+    vhdx_path: "C:/AttackRangeImages/win2022/disk.vhdx"
+    windows: true
+    cpus: 4
+    memory_mb: 8192
+    user_name: Administrator
+
+  - name: kali
+    ip_last_octet: 13
+    vhdx_path: "C:/AttackRangeImages/ubuntu-22.04/disk.vhdx"
+    windows: false
+    cpus: 2
+    memory_mb: 4096
+    user_name: kali
